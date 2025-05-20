@@ -17,7 +17,7 @@ CREATE TABLE sets (
     parent_set_id INTEGER REFERENCES sets(set_id) ON DELETE SET NULL,
     name VARCHAR(255) NOT NULL,
     is_public BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMP DEFAULT NOW(),
 );
 
 CREATE TABLE terms (
@@ -34,6 +34,7 @@ CREATE TABLE user_sets (
     set_id INTEGER NOT NULL REFERENCES sets(set_id) ON DELETE CASCADE,
     last_accessed_at TIMESTAMP,
     added_at TIMESTAMP DEFAULT NOW(),
+    starred BOOLEAN DEFAULT FALSE,
     PRIMARY KEY (user_id, set_id)
 );
 
@@ -45,4 +46,11 @@ CREATE TABLE user_term_progress (
     difficulty FLOAT CHECK (difficulty BETWEEN 0 AND 5),
     last_practiced_at TIMESTAMP,
     PRIMARY KEY (user_id, term_id)
+);
+
+CREATE TABLE set_ratings (
+    set_id INTEGER REFERENCES sets(set_id),
+    user_id INTEGER REFERENCES users(user_id),
+    stars INTEGER CHECK (stars BETWEEN 1 AND 5),
+    PRIMARY KEY (set_id, user_id)
 );
