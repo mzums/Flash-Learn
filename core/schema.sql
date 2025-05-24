@@ -1,5 +1,6 @@
 DROP TABLE IF EXISTS user_term_progress;
 DROP TABLE IF EXISTS user_sets;
+DROP TABLE IF EXISTS set_ratings;
 DROP TABLE IF EXISTS terms;
 DROP TABLE IF EXISTS sets;
 DROP TABLE IF EXISTS users;
@@ -17,7 +18,7 @@ CREATE TABLE sets (
     parent_set_id INTEGER REFERENCES sets(set_id) ON DELETE SET NULL,
     name VARCHAR(255) NOT NULL,
     is_public BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT NOW(),
+    created_at TIMESTAMP DEFAULT NOW()
 );
 
 CREATE TABLE terms (
@@ -53,4 +54,4 @@ CREATE TABLE set_ratings (
     user_id INTEGER REFERENCES users(user_id),
     stars INTEGER CHECK (stars BETWEEN 1 AND 5),
     PRIMARY KEY (set_id, user_id)
-);
+)
