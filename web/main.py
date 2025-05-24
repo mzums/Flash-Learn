@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException
-from database import get_db
+from core.database import get_db
 import psycopg2
-import schemas
+from core import schemas
 
 app = FastAPI()
 
@@ -16,19 +16,25 @@ def get_public_sets(db: psycopg2.extensions.connection = Depends(get_db)):
 
 
 @app.post("/users", response_model=schemas.UserResponse)
-def create_user(user: schemas.UserCreate, db: psycopg2.extensions.connection = Depends(get_db)):
-    cursor = db.cursor()
-    try:
-        cursor.execute(
-            "INSERT INTO users (username, email) VALUES (%s, %s) RETURNING user_id",
-            (user.username, user.email))
-        user_id = cursor.fetchone()[0]
-        db.commit()
-        return {"user_id": user_id, **user.dict()}
-    except psycopg2.IntegrityError as e:
-        raise HTTPException(400, "Username/email already exists")
-    finally:
-        cursor.close()
+def create_user(user: schemas.UserCreate):
+    with get_db() as db:
+        cursor = db.cursor()
+        try:
+            cursor.execute(
+                "INSERT INTO users (username, email) VALUES (%s, %s) RETURNING user_id, username, email, created_at",
+                (user.username, user.email)
+            )
+            result = cursor.fetchone()
+            return {
+                "user_id": result[0],
+                "username": result[1],
+                "email": result[2],
+                "created_at": result[3]
+            }
+        except psycopg2.IntegrityError as e:
+            raise HTTPException(400, "Username/email already exists")
+        finally:
+            cursor.close()
 
 
 @app.get("/users/{user_id}/progress")

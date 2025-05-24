@@ -31,7 +31,6 @@ class SetResponse(BaseModel):
     name: str
     creator_id: int
     parent_set_id: Optional[int]
-    
     is_public: bool
     created_at: datetime
 
