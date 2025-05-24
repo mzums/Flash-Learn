@@ -6,26 +6,50 @@ class QuizletClient:
     def __init__(self, base_url: str = "http://localhost:8000"):
         self.base_url = base_url
         self.session = requests.Session()
+        self.logged_user_id = None
 
-    def login(self, username: str) -> bool:
-        """Logowanie poprzez wysłanie istniejącego username"""
-        response = self.session.post(
-            f"{self.base_url}/login",
-            json={"username": username}
-        )
-        return response.status_code == 200
+    def _debug_request(self, response):
+        """Funkcja pomocnicza do debugowania żądań"""
+        print(f"[DEBUG] URL: {response.url}")
+        print(f"[DEBUG] Status code: {response.status_code}")
+        print(f"[DEBUG] Response: {response.text}\n")
 
     def create_user(self, username: str, email: str) -> Optional[Dict]:
         response = self.session.post(
-            f"{self.base_url}/users",
+            f"{self.base_url}/api/users/",
             json={"username": username, "email": email}
         )
-        return response.json() if response.status_code == 200 else None
+        self._debug_request(response)
+        try:
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            print(f"[ERROR] Create user: {str(e)}")
+            return None
+
+    def login(self, username: str) -> bool:
+        response = self.session.post(
+            f"{self.base_url}/api/users/login",
+            json={"username": username}
+        )
+        self._debug_request(response)
+        if response.status_code == 200:
+            try:
+                user_data = response.json()
+                self.logged_user_id = user_data["user_id"]
+                return True
+            except KeyError:
+                print("[ERROR] Brak user_id w odpowiedzi serwera")
+        return False
 
     def create_set(self, name: str, is_public: bool = True) -> Optional[Dict]:
         response = self.session.post(
-            f"{self.base_url}/sets",
-            json={"name": name, "is_public": is_public}
+            f"{self.base_url}/api/v1/sets",
+            json={
+                "name": name,
+                "is_public": is_public,
+                "creator_id": self.logged_user_id
+            }
         )
         return response.json() if response.status_code == 200 else None
 
@@ -44,42 +68,34 @@ class QuizletClient:
         self.session.cookies.clear()
 
 
+
 if __name__ == "__main__":
     client = QuizletClient()
+    print("=== Rozpoczynam test ===")
     
     try:
-        # 1. Create user
-        user = client.create_user("test_user16", "test16@example.com")
+        print("\n--- Creating user ---")
+        user = client.create_user("test_user32", "test32@example.com")
         if not user:
-            print("Error creating user!")
+            print("!!! Error creating user !!!")
             exit()
-        print("Created user:", user)
+        print(f"Created user: {user}")
 
-        # 2. Login
+        print("\n--- Login ---")
         if not client.login(user["username"]):
-            print("Login error!")
+            print("!!! Login error !!!")
             exit()
-        print("Login successful!")
+        print(f"Logged in! User ID: {client.logged_user_id}")
 
-        # 3. Create set
+        print("\n--- creating set ---")
         new_set = client.create_set("My flashcards", is_public=True)
         if not new_set:
-            print("Error creating set!")
+            print("!!! Error creating set !!!")
             exit()
-        print("Created set:", new_set)
-
-        # 4. Add flashcard
-        term = client.add_term(new_set["set_id"], "Hello", "Cześć")
-        if not term:
-            print("Error adding flashcard!")
-            exit()
-        print("Added flashcard:", term)
-
-        # 5. Get sets
-        sets = client.get_my_sets()
-        print("Set list:", sets)
+        print(f"Created set: {new_set}")
 
     except Exception as e:
-        print("Error occurred:", e)
+        print(f"\n### Critic error: {str(e)} ###")
     finally:
         client.logout()
+        print("\n=== Test completed ===")

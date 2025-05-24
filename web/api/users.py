@@ -1,32 +1,12 @@
-# web/api/users.py
 from fastapi import APIRouter, Depends, HTTPException
-from core.repositories.users import create_user
-from core.schemas import UserCreate, UserResponse, UserProgressResponse
-from core.repositories.users import create_user, get_user_progress
 from core.database import get_db
+from core import schemas
+import psycopg2
 
-router = APIRouter(prefix="/users")
+router = APIRouter()
 
-@router.post("/", response_model=UserResponse)
-def create_user_endpoint(user_data: UserCreate):
-    try:
-        return create_user(user_data)
-    except ValueError as e:
-        raise HTTPException(400, detail=str(e))
-    
-
-@router.get("/{user_id}/progress", response_model=UserProgressResponse)
-def get_user_progress_endpoint(user_id: int):
-    try:
-        return get_user_progress(user_id)
-    except ValueError as e:
-        raise HTTPException(500, detail=str(e))
-    except Exception as e:
-        raise HTTPException(404, detail="User not found")
-    
-
-@router.post("/", response_model=UserResponse)
-async def create_user(user_data: UserCreate):
+@router.post("/", response_model=schemas.UserResponse)
+def create_user(user: schemas.UserCreate):
     with get_db() as db:
         cursor = db.cursor()
         try:
@@ -34,18 +14,58 @@ async def create_user(user_data: UserCreate):
                 """
                 INSERT INTO users (username, email)
                 VALUES (%s, %s)
-                RETURNING user_id, username, email, created_at  # Zwróć created_at
+                RETURNING user_id, username, email, created_at
                 """,
-                (user_data.username, user_data.email)
+                (user.username, user.email)
             )
             result = cursor.fetchone()
+            db.commit()
+            
             return {
                 "user_id": result[0],
                 "username": result[1],
                 "email": result[2],
                 "created_at": result[3]
             }
+        except psycopg2.IntegrityError as e:
+            db.rollback()
+            raise HTTPException(400, "Username/email already exists")
         except Exception as e:
-            raise HTTPException(500, "Database error")
-        
-        
+            db.rollback()
+            raise HTTPException(500, f"Database error: {str(e)}")
+        finally:
+            cursor.close()
+
+@router.get("/{user_id}/progress")
+def get_user_progress(user_id: int, db: psycopg2.extensions.connection = Depends(get_db)):
+    cursor = db.cursor()
+    cursor.execute("""
+        SELECT t.word, utp.repetitions 
+        FROM user_term_progress utp
+        JOIN terms t ON utp.term_id = t.term_id
+        WHERE utp.user_id = %s
+    """, (user_id,))
+    progress = cursor.fetchall()
+    cursor.close()
+    return {"user_id": user_id, "progress": progress}
+
+@router.post("/login", response_model=schemas.UserResponse)
+def login(user_data: schemas.UserLogin):
+    with get_db() as db:
+        cursor = db.cursor()
+        cursor.execute(
+            "SELECT user_id, username, email, created_at FROM users WHERE username = %s",
+            (user_data.username,)
+        )
+        user = cursor.fetchone()
+        cursor.close()
+
+    if not user:
+        raise HTTPException(404, "User not found")
+    
+    return {
+        "user_id": user[0],
+        "username": user[1],
+        "email": user[2],
+        "created_at": user[3]
+    }
