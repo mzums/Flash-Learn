@@ -49,3 +49,43 @@ def get_user_progress(user_id: int, db: psycopg2.extensions.connection = Depends
     progress = cursor.fetchall()
     cursor.close()
     return {"user_id": user_id, "progress": progress}
+
+
+@app.post("/login")
+def login(user_data: schemas.UserLogin):
+    with get_db() as db:
+        cursor = db.cursor()
+        cursor.execute("SELECT * FROM users WHERE username = %s", (user_data.username,))
+        user = cursor.fetchone()
+        cursor.close()
+
+    if not user:
+        raise HTTPException(404, "User not found")
+    
+    return {"message": "Logged in"}
+
+
+@app.post("/create_set")
+def create_set(name: schemas.SetCreate, is_public: schemas.SetCreate):
+    with get_db() as db:
+        cursor = db.cursor()
+        cursor.execute("INSERT INTO sets (name, is_public) VALUES(%s, %s) RETURNING set_id, name, creator_id, parent_set_id")
+        set = cursor.fetchone()
+        cursor.close()
+
+    if not set:
+        raise HTTPException(404, "Set not found")
+    
+    return {"message": "Set created"}
+
+
+"""
+from fastapi import FastAPI
+from core.database import get_db
+from web.api import users, sets
+
+app = FastAPI()
+
+app.include_router(users.router, prefix="/api/v1/users")
+app.include_router(sets.router, prefix="/api/v1/sets")
+"""

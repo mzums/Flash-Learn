@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from core.repositories.users import create_user
 from core.schemas import UserCreate, UserResponse, UserProgressResponse
 from core.repositories.users import create_user, get_user_progress
+from core.database import get_db
 
 router = APIRouter(prefix="/users")
 
@@ -22,3 +23,29 @@ def get_user_progress_endpoint(user_id: int):
         raise HTTPException(500, detail=str(e))
     except Exception as e:
         raise HTTPException(404, detail="User not found")
+    
+
+@router.post("/", response_model=UserResponse)
+async def create_user(user_data: UserCreate):
+    with get_db() as db:
+        cursor = db.cursor()
+        try:
+            cursor.execute(
+                """
+                INSERT INTO users (username, email)
+                VALUES (%s, %s)
+                RETURNING user_id, username, email, created_at  # Zwróć created_at
+                """,
+                (user_data.username, user_data.email)
+            )
+            result = cursor.fetchone()
+            return {
+                "user_id": result[0],
+                "username": result[1],
+                "email": result[2],
+                "created_at": result[3]
+            }
+        except Exception as e:
+            raise HTTPException(500, "Database error")
+        
+        

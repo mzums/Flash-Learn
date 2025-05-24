@@ -17,10 +17,22 @@ class UserResponse(BaseModel):
     email: str
     created_at: datetime
 
+class UserLogin(BaseModel):
+    username: str
+
+class UserProgressResponse(BaseModel):
+    user_id: int
+    term_id: int
+    repetitions: int
+    starred: bool
+    difficulty: float
+    last_practiced_at: datetime
+
 # Sets
 class SetCreate(BaseModel):
     name: str
     is_public: bool = False
+    creator_id: int
 
 class SetUpdate(BaseModel):
     name: Optional[str] = None
@@ -33,6 +45,12 @@ class SetResponse(BaseModel):
     parent_set_id: Optional[int]
     is_public: bool
     created_at: datetime
+
+# Fork
+class SetForkCreate(BaseModel):
+    name: str
+    parent_set_id: int  # 👈 Nowe pole
+    is_public: bool = False
 
 # User-Set Relationship (user_sets)
 class UserSetResponse(BaseModel):

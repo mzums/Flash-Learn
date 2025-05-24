@@ -1,14 +1,18 @@
-from contextlib import contextmanager
 import psycopg2
 from psycopg2 import pool
+from contextlib import contextmanager
+
+DB_CONFIG = {
+    "host": "localhost",
+    "database": "flashlearn",
+    "user": "postgres",
+    "password": ""
+}
 
 connection_pool = psycopg2.pool.SimpleConnectionPool(
     minconn=1,
     maxconn=10,
-    host="localhost",
-    database="flashlearn",
-    user="postgres",
-    password=""
+    **DB_CONFIG
 )
 
 @contextmanager
