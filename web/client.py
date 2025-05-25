@@ -91,6 +91,13 @@ class QuizletClient:
     def logout(self):
         self.session.cookies.clear()
 
+    def add_term(self, set_id: int, word: str, definition: str, user_id: int) -> Optional[Dict]:
+        response = self.session.post(
+            f"{self.base_url}/api/v1/sets/{set_id}/terms",
+            json={"word": word, "definition": definition},
+            headers={"X-User-ID": str(user_id)}  # 👈 Przekaż ID w nagłówku
+        )
+        return response.json() if response.status_code == 200 else None
 
 
 if __name__ == "__main__":
@@ -99,7 +106,7 @@ if __name__ == "__main__":
     
     try:
         print("\n--- Creating user ---")
-        user = client.create_user("test_user8", "test8@example.com")
+        user = client.create_user("test_user1", "test1@example.com")
         if not user:
             print("!!! Error creating user !!!")
             exit()
@@ -118,6 +125,7 @@ if __name__ == "__main__":
             exit()
         print(f"Created set: {new_set}")
 
+        """
         print("\n--- creating fork ---")
         forked_set = client.fork_set(
             parent_set_id=1,
@@ -127,7 +135,17 @@ if __name__ == "__main__":
 
         print("Fork created:", forked_set)
 
-        forks = client.get_set_forks(set_id = 1)
+        forks = client.get_set_forks(set_id = 1)"""
+
+        print("\n--- creating flashcard ---")
+        term = client.add_term(
+            set_id=1,
+            word="Hello1",
+            definition="Cześć1",
+            user_id=1
+        )
+        print("Created flashcard:", term)
+
 
     except Exception as e:
         print(f"\n### Critic error: {str(e)} ###")

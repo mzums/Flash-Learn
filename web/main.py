@@ -16,11 +16,11 @@ async def debug_middleware(request: Request, call_next):
     try:
         response = await call_next(request)
     except Exception as e:
-        print(f"\n⚠️ Błąd: {str(e)}")
-        print(f"Ścieżka: {request.url.path}")
+        print(f"\n⚠️ Error: {str(e)}")
+        print(f"Path: {request.url.path}")
         response = JSONResponse(
             status_code=500,
-            content={"detail": "Wewnętrzny błąd serwera"}
+            content={"detail": "Inner server error"}
         )
     finally:
         process_time = time.time() - start_time

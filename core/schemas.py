@@ -61,19 +61,19 @@ class UserSetResponse(BaseModel):
     added_at: datetime
 
 # Terms
-class TermCreate(BaseModel):
-    word: str
-    definition: str
-
 class TermUpdate(BaseModel):
     word: Optional[str] = None
     definition: Optional[str] = None
 
-class TermResponse(BaseModel):
-    term_id: int
+class TermCreate(BaseModel):
     word: str
     definition: str
+    order_in_set: Optional[int] = None
+
+class TermResponse(TermCreate):
+    term_id: int
     set_id: int
-    order_in_set: Optional[int]
     created_at: datetime
-    
+
+    class Config:
+        orm_mode = True

@@ -15,14 +15,15 @@ connection_pool = psycopg2.pool.SimpleConnectionPool(
     **DB_CONFIG
 )
 
+
 @contextmanager
 def get_db():
     conn = connection_pool.getconn()
     try:
-        yield conn
+        yield conn  # 👈 Zwracamy BEZPOŚREDNIO połączenie
         conn.commit()
-    except Exception:
+    except Exception as e:
         conn.rollback()
-        raise
+        raise e
     finally:
         connection_pool.putconn(conn)
