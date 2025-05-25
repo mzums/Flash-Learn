@@ -7,7 +7,6 @@ def create_user(user_data: UserCreate) -> UserResponse:
     with get_db() as db:
         cursor = db.cursor()
         try:
-            # Zwróć WSZYSTKIE potrzebne pola
             cursor.execute(
                 """
                 INSERT INTO users (username, email)

@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from core.database import get_db
 from core import schemas
 import psycopg2
+import psycopg2.extras
 
 router = APIRouter()
 
@@ -52,20 +53,21 @@ def get_user_progress(user_id: int, db: psycopg2.extensions.connection = Depends
 @router.post("/login", response_model=schemas.UserResponse)
 def login(user_data: schemas.UserLogin):
     with get_db() as db:
-        cursor = db.cursor()
-        cursor.execute(
-            "SELECT user_id, username, email, created_at FROM users WHERE username = %s",
-            (user_data.username,)
-        )
-        user = cursor.fetchone()
-        cursor.close()
-
-    if not user:
-        raise HTTPException(404, "User not found")
-    
-    return {
-        "user_id": user[0],
-        "username": user[1],
-        "email": user[2],
-        "created_at": user[3]
-    }
+        cursor = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        try:
+            cursor.execute(
+                "SELECT user_id, username, email, created_at FROM users WHERE username = %s",
+                (user_data.username,)
+            )
+            user = cursor.fetchone()
+            
+            if not user:
+                raise HTTPException(404, detail="User not found")
+                
+            return dict(user)
+            
+        except psycopg2.Error as e:
+            print(f"Database error: {str(e)}")
+            raise HTTPException(500, "Internal server error")
+        finally:
+            cursor.close()

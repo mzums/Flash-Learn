@@ -49,8 +49,8 @@ class SetResponse(BaseModel):
 # Fork
 class SetForkCreate(BaseModel):
     name: str
-    parent_set_id: int  # 👈 Nowe pole
     is_public: bool = False
+    creator_id: int
 
 # User-Set Relationship (user_sets)
 class UserSetResponse(BaseModel):

@@ -36,3 +36,26 @@ def create_set(set_data: schemas.SetCreate, request: Request):
         except psycopg2.IntegrityError as e:
             db.rollback()
             raise HTTPException(400, "Set name already exists")
+
+
+@router.post("/{parent_set_id}/fork", response_model=schemas.SetResponse)
+def fork_set_endpoint(
+    parent_set_id: int,
+    fork_data: schemas.SetForkCreate,
+    db: psycopg2.extensions.connection = Depends(get_db)
+):
+    try:
+        from core.repositories.sets import fork_set
+        new_set = fork_set(
+            user_id=fork_data.creator_id,
+            parent_set_id=parent_set_id,
+            name=fork_data.name,
+            is_public=fork_data.is_public
+        )
+        return new_set
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(500, detail=str(e))

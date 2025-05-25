@@ -9,7 +9,6 @@ class QuizletClient:
         self.logged_user_id = None
 
     def _debug_request(self, response):
-        """Funkcja pomocnicza do debugowania żądań"""
         print(f"[DEBUG] URL: {response.url}")
         print(f"[DEBUG] Status code: {response.status_code}")
         print(f"[DEBUG] Response: {response.text}\n")
@@ -28,19 +27,21 @@ class QuizletClient:
             return None
 
     def login(self, username: str) -> bool:
-        response = self.session.post(
-            f"{self.base_url}/api/users/login",
-            json={"username": username}
-        )
-        self._debug_request(response)
-        if response.status_code == 200:
-            try:
-                user_data = response.json()
-                self.logged_user_id = user_data["user_id"]
+        try:
+            response = self.session.post(
+                f"{self.base_url}/api/users/login",
+                json={"username": username}
+            )
+            self._debug_request(response)
+            
+            if response.status_code == 200:
+                self.logged_user_id = response.json()["user_id"]
                 return True
-            except KeyError:
-                print("[ERROR] Brak user_id w odpowiedzi serwera")
-        return False
+                
+            return False
+        except Exception as e:
+            print(f"Login error: {str(e)}")
+            return False
 
     def create_set(self, name: str, is_public: bool = True) -> Optional[Dict]:
         response = self.session.post(
@@ -52,6 +53,29 @@ class QuizletClient:
             }
         )
         return response.json() if response.status_code == 200 else None
+    
+    def fork_set(self, parent_set_id: int, name: str, is_public: bool = False) -> Optional[Dict]:
+        if not self.logged_user_id:
+            print("Error: User not logged in")
+            return None
+            
+        response = self.session.post(
+            f"{self.base_url}/api/v1/sets/{parent_set_id}/fork",
+            json={
+                "name": name,
+                "is_public": is_public,
+                "creator_id": self.logged_user_id
+            }
+        )
+        
+        print(f"[FORK] Status code: {response.status_code}")
+        print(f"[FORK] Response content: {response.text}")
+    
+        return response.json() if response.status_code == 200 else None
+    
+    def get_set_forks(self, set_id: int):
+        response = self.session.get(f"{self.base_url}/api/v1/sets/{set_id}/forks")
+        return response.json()
 
     def add_term(self, set_id: int, word: str, definition: str) -> Optional[Dict]:
         response = self.session.post(
@@ -75,14 +99,14 @@ if __name__ == "__main__":
     
     try:
         print("\n--- Creating user ---")
-        user = client.create_user("test_user32", "test32@example.com")
+        user = client.create_user("test_user8", "test8@example.com")
         if not user:
             print("!!! Error creating user !!!")
             exit()
         print(f"Created user: {user}")
 
         print("\n--- Login ---")
-        if not client.login(user["username"]):
+        if not client.login("test_user1"):
             print("!!! Login error !!!")
             exit()
         print(f"Logged in! User ID: {client.logged_user_id}")
@@ -93,6 +117,17 @@ if __name__ == "__main__":
             print("!!! Error creating set !!!")
             exit()
         print(f"Created set: {new_set}")
+
+        print("\n--- creating fork ---")
+        forked_set = client.fork_set(
+            parent_set_id=1,
+            name="My fork",
+            is_public=False
+        )
+
+        print("Fork created:", forked_set)
+
+        forks = client.get_set_forks(set_id = 1)
 
     except Exception as e:
         print(f"\n### Critic error: {str(e)} ###")

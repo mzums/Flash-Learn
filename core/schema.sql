@@ -54,4 +54,4 @@ CREATE TABLE set_ratings (
     user_id INTEGER REFERENCES users(user_id),
     stars INTEGER CHECK (stars BETWEEN 1 AND 5),
     PRIMARY KEY (set_id, user_id)
-)
+);

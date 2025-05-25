@@ -1,32 +1,51 @@
 # core/repositories/sets.py
 from core.database import get_db
 from core.schemas import SetResponse, SetCreate
+import psycopg2.extras
 import psycopg2
 
 
-def fork_set(parent_set_id: int, name: str, is_public: bool) -> SetResponse:
+def fork_set(user_id: int, parent_set_id: int, name: str, is_public: bool) -> SetResponse:
     with get_db() as db:
-        cursor = db.cursor()
-        
-        cursor.execute("SELECT * FROM sets WHERE set_id = %s", (parent_set_id,))
-        original_set = cursor.fetchone()
-        
-        cursor.execute("""
-            INSERT INTO sets (name, creator_id, parent_set_id, is_public)
-            VALUES (%s, %s, %s, %s)
-            RETURNING set_id, name, creator_id, parent_set_id, is_public, created_at
-        """, (name, original_set["creator_id"], parent_set_id, is_public))
-        
-        new_set = cursor.fetchone()
-        db.commit()
-        
-        return new_set
+        cursor = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        try:
+            cursor.execute("SELECT * FROM sets WHERE set_id = %s", (parent_set_id,))
+            original_set = cursor.fetchone()
+            if not original_set:
+                raise ValueError("Parent set not found")
+            elif original_set["is_public"] == False:
+                raise ValueError("Parent set not public")
+
+            cursor.execute("""
+                INSERT INTO sets (name, creator_id, parent_set_id, is_public)
+                VALUES (%s, %s, %s, %s)
+                RETURNING set_id, name, creator_id, parent_set_id, is_public, created_at
+            """, (name, user_id, parent_set_id, is_public))
+            
+            new_set = cursor.fetchone()
+            
+            cursor.execute("""
+                INSERT INTO terms (set_id, word, definition, order_in_set)
+                SELECT %s, word, definition, order_in_set
+                FROM terms
+                WHERE set_id = %s
+            """, (new_set["set_id"], parent_set_id))
+
+            db.commit()
+            return dict(new_set)
+            
+        except psycopg2.Error as e:
+            db.rollback()
+            raise ValueError(f"Database error: {str(e)}")
+        finally:
+            cursor.close()
     
 
-def create_set(creator_id: int, set_data: SetCreate) -> SetResponse:
+def create_set(creator_id: int, set_data: SetCreate, name: str) -> SetResponse:
     with get_db() as db:
-        cursor = db.cursor()
+        cursor = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
         try:
+            cursor.execute("SELECT * FROM sets WHERE name = %s", (name,))
             cursor.execute(
                 """
                 INSERT INTO sets (name, is_public, creator_id)
