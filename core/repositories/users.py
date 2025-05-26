@@ -1,4 +1,3 @@
-# core/repositories/users.py
 from core.database import get_db
 from core.schemas import UserCreate, UserResponse, UserProgressResponse
 import psycopg2

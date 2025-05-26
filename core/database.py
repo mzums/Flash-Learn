@@ -1,5 +1,6 @@
 import psycopg2
 from psycopg2 import pool
+from fastapi import Depends
 from contextlib import contextmanager
 
 DB_CONFIG = {
@@ -15,12 +16,10 @@ connection_pool = psycopg2.pool.SimpleConnectionPool(
     **DB_CONFIG
 )
 
-
-@contextmanager
 def get_db():
     conn = connection_pool.getconn()
     try:
-        yield conn  # 👈 Zwracamy BEZPOŚREDNIO połączenie
+        yield conn
         conn.commit()
     except Exception as e:
         conn.rollback()

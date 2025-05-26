@@ -95,7 +95,7 @@ class QuizletClient:
         response = self.session.post(
             f"{self.base_url}/api/v1/sets/{set_id}/terms",
             json={"word": word, "definition": definition},
-            headers={"X-User-ID": str(user_id)}  # 👈 Przekaż ID w nagłówku
+            headers={"X-User-ID": str(user_id)}
         )
         return response.json() if response.status_code == 200 else None
 
@@ -105,20 +105,20 @@ if __name__ == "__main__":
     print("=== Rozpoczynam test ===")
     
     try:
-        print("\n--- Creating user ---")
-        user = client.create_user("test_user1", "test1@example.com")
+        """print("\n--- Creating user ---")
+        user = client.create_user("test_user2", "test2@example.com")
         if not user:
             print("!!! Error creating user !!!")
             exit()
-        print(f"Created user: {user}")
+        print(f"Created user: {user}")"""
 
         print("\n--- Login ---")
-        if not client.login("test_user1"):
+        if not client.login("test_user2"):
             print("!!! Login error !!!")
             exit()
         print(f"Logged in! User ID: {client.logged_user_id}")
 
-        print("\n--- creating set ---")
+        """print("\n--- creating set ---")
         new_set = client.create_set("My flashcards", is_public=True)
         if not new_set:
             print("!!! Error creating set !!!")
@@ -135,14 +135,14 @@ if __name__ == "__main__":
 
         print("Fork created:", forked_set)
 
-        forks = client.get_set_forks(set_id = 1)"""
+        forks = client.get_set_forks(set_id = 1)
 
         print("\n--- creating flashcard ---")
         term = client.add_term(
             set_id=1,
-            word="Hello1",
-            definition="Cześć1",
-            user_id=1
+            word="Hello2",
+            definition="Cześć2",
+            user_id=2
         )
         print("Created flashcard:", term)
 

@@ -9,7 +9,7 @@ router = APIRouter()
 @router.post("/", response_model=schemas.UserResponse)
 def create_user(
     user_data: schemas.UserCreate,
-    db: psycopg2.extensions.connection = Depends(get_db)  # 👈 Pobierz połączenie
+    db: psycopg2.extensions.connection = Depends(get_db)
 ):
     cursor = db.cursor()
     try:
@@ -57,7 +57,6 @@ def login(
         if not user:
             raise HTTPException(404, "User not found")
             
-        # Konwersja krotki na słownik
         columns = [desc[0] for desc in cursor.description]
         user_dict = dict(zip(columns, user))
         

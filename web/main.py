@@ -16,7 +16,7 @@ async def debug_middleware(request: Request, call_next):
     try:
         response = await call_next(request)
     except Exception as e:
-        print(f"\n⚠️ Error: {str(e)}")
+        print(f"\nError: {str(e)}")
         print(f"Path: {request.url.path}")
         response = JSONResponse(
             status_code=500,

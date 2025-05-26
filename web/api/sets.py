@@ -20,7 +20,7 @@ def get_public_sets(db: psycopg2.extensions.connection = Depends(get_db)):
 @router.post("/", response_model=schemas.SetResponse)
 def create_set(
     set_data: schemas.SetCreate,
-    db: psycopg2.extensions.connection = Depends(get_db)  # 👈 Dodaj tę linię
+    db: psycopg2.extensions.connection = Depends(get_db)
 ):
     cursor = db.cursor()
     try:
@@ -58,6 +58,7 @@ def fork_set_endpoint(
     try:
         from core.repositories.sets import fork_set
         new_set = fork_set(
+            db=db,
             user_id=fork_data.creator_id,
             parent_set_id=parent_set_id,
             name=fork_data.name,
@@ -67,8 +68,6 @@ def fork_set_endpoint(
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        import traceback
-        traceback.print_exc()
         raise HTTPException(500, detail=str(e))
 
 
@@ -79,29 +78,29 @@ def add_term(
     x_user_id: int = Header(..., alias="X-User-ID"),
     db: psycopg2.extensions.connection = Depends(get_db)
 ):
-    cursor = db.cursor(cursor_factory=psycopg2.extras.DictCursor)  # 👈 Zmień typ kursora
+    cursor = None
     try:
-        # Sprawdź właściciela
+        cursor = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        
         cursor.execute("SELECT creator_id FROM sets WHERE set_id = %s", (set_id,))
         result = cursor.fetchone()
+        if not result or result["creator_id"] != x_user_id:
+            raise HTTPException(status_code=403, detail="Access denied")
         
-        if not result or result["creator_id"] != x_user_id:  # 👈 Dostęp przez klucz
-            raise HTTPException(403, "Access denied")
-
-        # Dodaj fiszkę
-        cursor.execute(
-            """
-            INSERT INTO terms (set_id, word, definition)
-            VALUES (%s, %s, %s)
-            RETURNING term_id, set_id, word, definition, order_in_set, created_at  # 👈 Dodaj order_in_set
-            """,
-            (set_id, term_data.word, term_data.definition)
-        )
-        
-        term = dict(cursor.fetchone())  # 👈 Konwersja na słownik
+        from core.repositories.terms import create_term
+        term = create_term(db, set_id, term_data)
+        db.commit()
         return term
         
+    except ValueError as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
     except psycopg2.Error as e:
-        raise HTTPException(500, "Database error")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Internal server error")
     finally:
-        cursor.close()
+        if cursor:
+            cursor.close()
