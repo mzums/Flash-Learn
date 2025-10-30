@@ -93,6 +93,52 @@ def practice_words():
     for w, cnt in attempts.items():
         print(f'  {w}: {cnt} attempt(s)')
 
+def quiz():
+    data = _load_words()
+    if not data:
+        print("No words in words.json to practice.")
+        return
+
+    questions = random.sample(data, len(data))
+    score = 0
+
+    for idx, item in enumerate(questions, start=1):
+        correct_word = item.get("word", "")
+        definition = item.get("definition", "")
+
+        num_choices = min(4, len(data))
+        pool = [d for d in data if d.get("word", "").lower() != correct_word.lower()]
+        distractors = random.sample(pool, num_choices - 1) if pool else []
+        options = [correct_word] + [d.get("word", "") for d in distractors]
+        random.shuffle(options)
+
+        print(f'\nQuestion {idx}/{len(questions)}:')
+        print(f'What is the word for: "{definition}"?')
+        for i, opt in enumerate(options, start=1):
+            print(f'  {i}. {opt}')
+
+        choice = input(f'Enter choice (1-{len(options)}) or type the word: ').strip()
+        selected = None
+        if choice.isdigit():
+            n = int(choice)
+            if 1 <= n <= len(options):
+                selected = options[n - 1]
+        else:
+            selected = choice
+
+        if selected is None:
+            print("Invalid choice. Marked as incorrect.")
+            print(f'Incorrect! The correct word is: "{correct_word}"')
+            continue
+
+        if selected.lower().strip() == correct_word.lower():
+            print("Correct!")
+            score += 1
+        else:
+            print(f'Incorrect! The correct word is: "{correct_word}"')
+
+    print(f"\nQuiz finished. Score: {score}/{len(questions)}")
+
 
 if __name__ == "__main__":
     print("Welcome to FlashLearn!\n")
@@ -102,7 +148,8 @@ if __name__ == "__main__":
     print("3. View all words")
     print("4. Flashcards")
     print("5. Practice words")
-    choice = input("Enter your choice (1-5): ").strip()
+    print("6. Quiz")
+    choice = input("Enter your choice (1-6): ").strip()
     if choice == "1":
         add_word()
     elif choice == "2":
@@ -113,3 +160,5 @@ if __name__ == "__main__":
         flashcards()
     elif choice == "5":
         practice_words()
+    elif choice == "6":
+        quiz()
